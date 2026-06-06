@@ -15,10 +15,21 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
 
+  console.log(user);
+
   useEffect(() => {
-    api("/api/auth/me")
-      .then((d) => { if (d.user) setUser(d.user); })
-      .finally(() => setChecking(false));
+    const fetchMe = async () => {
+      try {
+        const data = await api("/api/auth/me");
+        if (data?.user) setUser(data.user);
+
+      } catch (error) {
+        setUser(null); 
+      } finally {
+        setChecking(false);
+      }
+    };
+    fetchMe();
   }, []);
 
   const handleLogout = async () => {
@@ -38,7 +49,12 @@ export default function App() {
   if (!user) {
     return (
       <AnimatePresence mode="wait">
-        <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <motion.div
+          key="login"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
           <LoginPage onLogin={setUser} />
         </motion.div>
       </AnimatePresence>
@@ -48,7 +64,12 @@ export default function App() {
   if (user.role === "ADMIN") {
     return (
       <AnimatePresence mode="wait">
-        <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <motion.div
+          key="admin"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
           <AdminDashboard user={user} onLogout={handleLogout} />
         </motion.div>
       </AnimatePresence>
@@ -58,10 +79,19 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/"                  element={<HomePage    user={user} onLogout={handleLogout} />} />
-        <Route path="/billing"           element={<BillingPage user={user} onLogout={handleLogout} />} />
-        <Route path="/build-assistant"   element={<BuildPage   user={user} onLogout={handleLogout} />} />
-        <Route path="*"                  element={<Navigate to="/" replace />} />
+        <Route
+          path="/"
+          element={<HomePage user={user} onLogout={handleLogout} />}
+        />
+        <Route
+          path="/billing"
+          element={<BillingPage user={user} onLogout={handleLogout} />}
+        />
+        <Route
+          path="/build-assistant"
+          element={<BuildPage user={user} onLogout={handleLogout} />}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

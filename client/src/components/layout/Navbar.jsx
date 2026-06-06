@@ -33,7 +33,7 @@ export function Navbar({ user, onLogout, onBilling, currentPage }) {
           {isUser && (
             <button
               onClick={onBilling}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-200
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-200 cursor-pointer
                 ${currentPage === "billing"
                   ? "bg-indigo-600 border-indigo-600 text-white shadow shadow-indigo-500/25"
                   : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white dark:bg-zinc-900"
@@ -70,7 +70,7 @@ export function Navbar({ user, onLogout, onBilling, currentPage }) {
           {/* Logout */}
           <button
             onClick={onLogout}
-            className="text-xs font-medium text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+            className=" text-xs font-semibold px-3 py-1.5 rounded-lg border  duration-200 cursor-pointer transition-colors  border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white dark:bg-zinc-900"
           >
             Logout
           </button>

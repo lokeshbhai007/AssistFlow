@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 export const googleLogin = async (req, res) => {
   try {
     const { idToken } = req.body;
- 
+
     if (!idToken) {
       return res.status(400).json({ message: "ID token is required" });
     }
@@ -37,7 +37,7 @@ export const googleLogin = async (req, res) => {
         tenantId: user.tenantId,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     // Store in HttpOnly cookie
@@ -67,7 +67,8 @@ export const googleLogin = async (req, res) => {
 
 export const logout = (req, res) => {
   res.clearCookie("token");
-  return res.status(200).json({ message: "Logged out successfully" });
+
+  return res.status(200).json({ message: "Successfully Logged out" });
 };
 
 export const getMe = async (req, res) => {

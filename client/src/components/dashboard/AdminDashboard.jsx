@@ -4,23 +4,26 @@ import { Navbar } from "../layout/Navbar.jsx";
 import { Spinner } from "../ui/Spinner.jsx";
 import { api } from "../../lib/api.js";
 
-const stagger = { show: { transition: { staggerChildren: 0.06 } } };
 const fadeUp  = {
   hidden: { opacity: 0, y: 16 },
   show:   { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 };
+const stagger = { show: { transition: { staggerChildren: 0.07 } } };
 
 const roleStyles = {
-  ADMIN: "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400",
-  USER:  "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-400",
+  ADMIN: "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-900",
+  USER:  "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-400 border border-sky-200 dark:border-sky-900",
 };
 
 function Avatar({ user }) {
   if (user.photo) {
-    return <img src={user.photo} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-zinc-200 dark:ring-zinc-700" />;
+    return (
+      <img src={user.photo} alt=""
+        className="w-8 h-8 rounded-full object-cover ring-1 ring-zinc-200 dark:ring-zinc-700 shrink-0" />
+    );
   }
   return (
-    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 grid place-items-center text-indigo-600 dark:text-indigo-300 text-xs font-bold">
+    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 grid place-items-center text-indigo-600 dark:text-indigo-300 text-xs font-bold shrink-0">
       {(user.name?.[0] || user.email[0]).toUpperCase()}
     </div>
   );
@@ -35,6 +38,9 @@ export function AdminDashboard({ user, onLogout }) {
       .then((d) => setTenants(d.users || []))
       .finally(() => setLoading(false));
   }, []);
+
+  const admins = tenants.filter((t) => t.role === "ADMIN").length;
+  const users  = tenants.filter((t) => t.role !== "ADMIN").length;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -54,27 +60,30 @@ export function AdminDashboard({ user, onLogout }) {
           </div>
           {!loading && (
             <span className="text-xs text-zinc-400 font-medium">
-              {tenants.length} {tenants.length === 1 ? "tenant" : "tenants"}
+              {tenants.length} {tenants.length === 1 ? "tenant" : "tenants"} total
             </span>
           )}
         </motion.div>
 
         {/* Summary cards */}
-        <motion.div variants={fadeUp} className="grid grid-cols-3 gap-3 mb-6">
+        <motion.div variants={fadeUp} className="grid grid-cols-3 gap-3 mb-7">
           {[
-            { label: "Total tenants", value: loading ? "—" : tenants.length },
-            { label: "Admins",        value: loading ? "—" : tenants.filter((t) => t.role === "ADMIN").length },
-            { label: "Active users",  value: loading ? "—" : tenants.filter((t) => t.role === "USER").length },
+            { label: "Total Tenants", value: loading ? "—" : tenants.length, color: "text-zinc-800 dark:text-zinc-100" },
+            { label: "Admins",        value: loading ? "—" : admins,          color: "text-amber-600 dark:text-amber-400" },
+            { label: "Users",         value: loading ? "—" : users,           color: "text-sky-600 dark:text-sky-400" },
           ].map((s) => (
             <div key={s.label} className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-5 py-4">
-              <p className="text-[11px] uppercase tracking-widest text-zinc-400 font-semibold mb-1">{s.label}</p>
-              <p className="text-2xl font-bold text-zinc-800 dark:text-zinc-100">{s.value}</p>
+              <p className="text-[11px] uppercase tracking-widest text-zinc-400 font-semibold mb-1.5">{s.label}</p>
+              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
             </div>
           ))}
         </motion.div>
 
         {/* Table */}
-        <motion.div variants={fadeUp} className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        <motion.div
+          variants={fadeUp}
+          className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden"
+        >
           {loading ? (
             <div className="py-20 flex justify-center">
               <Spinner size={6} />
@@ -101,7 +110,6 @@ export function AdminDashboard({ user, onLogout }) {
                     transition={{ delay: i * 0.04 }}
                     className="border-b border-zinc-50 dark:border-zinc-800/50 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
                   >
-                    {/* User */}
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <Avatar user={t} />
@@ -111,15 +119,12 @@ export function AdminDashboard({ user, onLogout }) {
                         </div>
                       </div>
                     </td>
-                    {/* Role */}
                     <td className="px-5 py-3.5">
                       <span className={`text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md ${roleStyles[t.role] ?? roleStyles.USER}`}>
                         {t.role}
                       </span>
                     </td>
-                    {/* Tenant */}
-                    <td className="px-5 py-3.5 text-zinc-500">{t.tenantId || "—"}</td>
-                    {/* Joined */}
+                    <td className="px-5 py-3.5 text-zinc-500 text-xs font-mono">{t.tenantId || "—"}</td>
                     <td className="px-5 py-3.5 text-zinc-400 text-xs">
                       {new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </td>

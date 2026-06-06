@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { signOut } from "firebase/auth";
 import { auth } from "./lib/firebase.js";
 import { api } from "./lib/api.js";
-import { LoginPage }      from "./components/auth/LoginPage.jsx";
-import { UserDashboard }  from "./components/dashboard/UserDashboard.jsx";
+import { Spinner } from "./components/ui/Spinner.jsx";
+import { LoginPage } from "./components/auth/LoginPage.jsx";
 import { AdminDashboard } from "./components/dashboard/AdminDashboard.jsx";
-import { Spinner }        from "./components/ui/Spinner.jsx";
+import { HomePage } from "./pages/HomePage.jsx";
+import { BillingPage } from "./pages/BillingPage.jsx";
+import { BuildPage } from "./pages/BuildPage.jsx";
 
 export default function App() {
-  const [user,     setUser]     = useState(null);
+  const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -32,21 +35,34 @@ export default function App() {
     );
   }
 
-  return (
-    <AnimatePresence mode="wait">
-      {!user ? (
+  if (!user) {
+    return (
+      <AnimatePresence mode="wait">
         <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <LoginPage onLogin={setUser} />
         </motion.div>
-      ) : user.role === "ADMIN" ? (
+      </AnimatePresence>
+    );
+  }
+
+  if (user.role === "ADMIN") {
+    return (
+      <AnimatePresence mode="wait">
         <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <AdminDashboard user={user} onLogout={handleLogout} />
         </motion.div>
-      ) : (
-        <motion.div key="user" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <UserDashboard user={user} onLogout={handleLogout} />
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </AnimatePresence>
+    );
+  }
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/"                  element={<HomePage    user={user} onLogout={handleLogout} />} />
+        <Route path="/billing"           element={<BillingPage user={user} onLogout={handleLogout} />} />
+        <Route path="/build-assistant"   element={<BuildPage   user={user} onLogout={handleLogout} />} />
+        <Route path="*"                  element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

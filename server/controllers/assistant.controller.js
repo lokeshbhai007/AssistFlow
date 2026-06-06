@@ -6,7 +6,7 @@ import User from "../models/user.model.js";
 export const createAssistant = async (req, res) => {
   try {
     console.log("req.user:", req.user);
-    
+
     // JWT has userId (MongoDB _id), not uid (Firebase)
     const { userId, email } = req.user;
 
@@ -20,12 +20,14 @@ export const createAssistant = async (req, res) => {
       assistantName,
       businessName,
       industry,
+      businessDescription, // ← add this
       assistantTone,
       theme,
       enableVoice,
       enableNavigation,
       pages,
       geminiApiKey,
+      isSetupComplete
     } = req.body;
 
     if (!assistantName || !businessName || !industry) {
@@ -39,21 +41,24 @@ export const createAssistant = async (req, res) => {
       {
         $set: {
           userId: dbUser._id,
-          uid: dbUser.uid || "",   // keep field but don't rely on JWT for it
+          uid: dbUser.uid || "",
           name: name || dbUser.name,
           email: email || dbUser.email,
           assistantName,
           businessName,
           industry,
+          businessDescription: businessDescription || "",
           assistantTone: assistantTone || "friendly",
           theme: theme || "dark",
           enableVoice: enableVoice !== undefined ? enableVoice : true,
-          enableNavigation: enableNavigation !== undefined ? enableNavigation : true,
+          enableNavigation:
+            enableNavigation !== undefined ? enableNavigation : true,
           pages: pages || [],
           geminiApiKey: geminiApiKey || "",
+          isSetupComplete
         },
       },
-      { new: true, upsert: true, runValidators: true }
+      { new: true, upsert: true, runValidators: true },
     );
 
     return res.status(200).json({
@@ -84,28 +89,21 @@ export const getAssistant = async (req, res) => {
   }
 };
 
-
-
-
-// ─── PATCH /api/user/assistant/complete ──────────────────────────────────────
-// Mark setup as complete (called on final deploy step).
-export const markSetupComplete = async (req, res) => {
+// ─── DELETE /api/user/assistant ──────────────────────────────────────────────
+export const deleteAssistant = async (req, res) => {
   try {
-    const { userId } = req.user; // ← was uid
+    const { userId } = req.user;
 
-    const assistant = await Assistant.findOneAndUpdate(
-      { userId },
-      { $set: { isSetupComplete: true } },
-      { new: true }
-    );
-
+    const assistant = await Assistant.findOneAndDelete({ userId });
     if (!assistant) {
       return res.status(404).json({ message: "No assistant found." });
     }
 
-    return res.status(200).json({ message: "Setup marked complete.", assistant });
+    return res.status(200).json({ message: "Assistant deleted successfully." });
   } catch (error) {
-    console.error("markSetupComplete error:", error);
+    console.error("deleteAssistant error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+

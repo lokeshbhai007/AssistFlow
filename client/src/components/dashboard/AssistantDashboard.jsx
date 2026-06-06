@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "../layout/Navbar.jsx";
 import { Stat } from "../ui/Stat.jsx";
 import { Badge } from "../ui/Badge.jsx";
+import { api } from "../../lib/api.js";
+import { DeleteModal } from "../ui/DeleteModal.jsx";
+import { Toast } from "../ui/Toast.jsx";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -15,7 +18,6 @@ const fadeUp = {
 };
 const stagger = { show: { transition: { staggerChildren: 0.07 } } };
 
-// ─── Tone / Theme badge colours ───────────────────────────────────────────────
 const TONE_COLOR = {
   friendly:
     "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400",
@@ -31,11 +33,30 @@ const THEME_COLOR = {
   neon: "bg-black     text-fuchsia-400",
 };
 
-// ─── Existing assistant view ──────────────────────────────────────────────────
-
-export function AssistantDashboard({ assistant, user, onLogout }) {
+// ─── Assistant Dashboard ──────────────────────────────────────────────────────
+export function AssistantDashboard({ assistant, user, onLogout, onDeleted }) {
   const navigate = useNavigate();
   const a = assistant;
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [toastVisible, setToastVisible] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await api("/api/user/assistant", { method: "DELETE" });
+      setShowDeleteModal(false);
+
+      if (onDeleted) onDeleted();
+      else navigate("/build-assistant");
+    } catch (err) {
+      setDeleteError(err.message || "Failed to delete assistant.");
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -46,6 +67,19 @@ export function AssistantDashboard({ assistant, user, onLogout }) {
         currentPage="builder"
       />
 
+      {/* Delete modal */}
+      {showDeleteModal && (
+        <DeleteModal
+          assistantName={a.assistantName}
+          onConfirm={handleDelete}
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setDeleteError("");
+          }}
+          deleting={deleting}
+        />
+      )}
+
       <motion.main
         variants={stagger}
         initial="hidden"
@@ -54,8 +88,6 @@ export function AssistantDashboard({ assistant, user, onLogout }) {
       >
         {/* Header */}
         <motion.div variants={fadeUp} className="mb-8 flex justify-between">
-          {/* Status pill */}
-
           <div>
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight mb-1">
               {a.assistantName}
@@ -97,6 +129,31 @@ export function AssistantDashboard({ assistant, user, onLogout }) {
           <Stat label="Pages indexed" value={a.pages.length} />
         </motion.div>
 
+        {/* Delete error banner */}
+        {deleteError && (
+          <motion.div
+            variants={fadeUp}
+            className="mb-4 flex items-start gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs"
+          >
+            <svg
+              width="14"
+              height="14"
+              className="mt-0.5 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            {deleteError}
+          </motion.div>
+        )}
+
         {/* Details card */}
         <motion.div
           variants={fadeUp}
@@ -107,7 +164,6 @@ export function AssistantDashboard({ assistant, user, onLogout }) {
           </h2>
 
           <div className="space-y-3">
-            {/* Tone + Theme */}
             <div className="flex items-center justify-between text-xs">
               <span className="text-zinc-400 font-medium">Tone</span>
               <Badge
@@ -127,7 +183,6 @@ export function AssistantDashboard({ assistant, user, onLogout }) {
               </Badge>
             </div>
 
-            {/* Toggles */}
             {[
               ["Voice enabled", a.enableVoice],
               ["Navigation enabled", a.enableNavigation],
@@ -145,7 +200,6 @@ export function AssistantDashboard({ assistant, user, onLogout }) {
               </div>
             ))}
 
-            {/* Gemini key */}
             <div className="flex items-center justify-between text-xs">
               <span className="text-zinc-400 font-medium">Gemini API key</span>
               <span className="font-mono text-zinc-500 dark:text-zinc-400">
@@ -155,7 +209,6 @@ export function AssistantDashboard({ assistant, user, onLogout }) {
               </span>
             </div>
 
-            {/* Email */}
             <div className="flex items-center justify-between text-xs">
               <span className="text-zinc-400 font-medium">Contact email</span>
               <span className="text-zinc-600 dark:text-zinc-300">
@@ -210,10 +263,38 @@ export function AssistantDashboard({ assistant, user, onLogout }) {
         )}
 
         {/* Action buttons */}
-        <motion.div variants={fadeUp} className="flex items-center gap-3">
+        <motion.div
+          variants={fadeUp}
+          className="flex items-center gap-3 flex-wrap"
+        >
+          {/* Delete button */}
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="inline-flex cursor-pointer items-center gap-2 px-5 py-2.5 rounded-xl border border-red-200 dark:border-red-900/60 text-red-500 dark:text-red-400 text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 transition-all active:scale-95"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
+            Delete
+          </button>
+
+          {/* Edit button */}
           <button
             onClick={() => navigate("/build-assistant/edit")}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-95"
+            className="inline-flex cursor-pointer items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-95"
           >
             <svg
               width="14"
@@ -231,13 +312,15 @@ export function AssistantDashboard({ assistant, user, onLogout }) {
             Edit Assistant
           </button>
 
+          {/* Embed script button */}
           <button
             onClick={() => {
               navigator.clipboard.writeText(
                 `<script src="https://yourdomain.com/widget.js" data-id="${a._id}"></script>`,
               );
+              setToastVisible(true);
             }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow shadow-indigo-500/20 transition-all active:scale-95"
+            className="inline-flex cursor-pointer items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow shadow-indigo-500/20 transition-all active:scale-95"
           >
             <svg
               width="14"
@@ -255,6 +338,12 @@ export function AssistantDashboard({ assistant, user, onLogout }) {
             Copy Embed Script
           </button>
         </motion.div>
+
+        <Toast
+          message="Embed script copied!"
+          show={toastVisible}
+          onHide={() => setToastVisible(false)}
+        />
       </motion.main>
     </div>
   );

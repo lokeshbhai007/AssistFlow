@@ -5,10 +5,9 @@ import { Navbar } from "../layout/Navbar";
 import { Skeleton } from "../ui/Skeleton";
 import { api } from "../../lib/api";
 
-
 export function AssistantGate({ user, onLogout, BuildPage }) {
-  const [status, setStatus]         = useState("loading"); // "loading" | "exists" | "none" | "error"
-  const [assistant, setAssistant]   = useState(null);
+  const [status, setStatus] = useState("loading"); // "loading" | "exists" | "none" | "error"
+  const [assistant, setAssistant] = useState(null);
 
   const navigate = useNavigate();
 
@@ -20,17 +19,28 @@ export function AssistantGate({ user, onLogout, BuildPage }) {
       })
       .catch((err) => {
         if (err.status === 404) {
-          setStatus("none"); // no assistant yet → show builder
+          setStatus("none");
         } else {
           setStatus("error");
         }
       });
   }, []);
 
+  // Called by AssistantDashboard after a successful delete
+  const handleDeleted = () => {
+    setAssistant(null);
+    setStatus("none");
+  };
+
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-        <Navbar user={user} onLogout={onLogout} onBilling={() => navigate("/billing")} currentPage="builder" />
+        <Navbar
+          user={user}
+          onLogout={onLogout}
+          onBilling={() => navigate("/billing")}
+          currentPage="builder"
+        />
         <Skeleton />
       </div>
     );
@@ -40,7 +50,9 @@ export function AssistantGate({ user, onLogout, BuildPage }) {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-zinc-400 text-sm mb-4">Failed to load assistant data.</p>
+          <p className="text-zinc-400 text-sm mb-4">
+            Failed to load assistant data.
+          </p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all"
@@ -53,7 +65,14 @@ export function AssistantGate({ user, onLogout, BuildPage }) {
   }
 
   if (status === "exists") {
-    return <AssistantDashboard assistant={assistant} user={user} onLogout={onLogout} />;
+    return (
+      <AssistantDashboard
+        assistant={assistant}
+        user={user}
+        onLogout={onLogout}
+        onDeleted={handleDeleted}
+      />
+    );
   }
 
   // status === "none" → render the wizard

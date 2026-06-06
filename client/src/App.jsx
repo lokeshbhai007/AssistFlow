@@ -10,8 +10,8 @@ import { AdminDashboard } from "./components/dashboard/AdminDashboard.jsx";
 import { HomePage } from "./pages/HomePage.jsx";
 import { BillingPage } from "./pages/BillingPage.jsx";
 import { BuildPage } from "./pages/BuildPage.jsx";
+import { EditAssistantPage } from "./pages/EditAssistantPage.jsx";
 import { AssistantGate } from "./components/dashboard/AssistantGate.jsx";
-
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -96,6 +96,13 @@ export default function App() {
               onLogout={handleLogout}
               BuildPage={BuildPage}
             />
+          }
+        />
+        {/* Edit route — only reachable if an assistant already exists */}
+        <Route
+          path="/build-assistant/edit"
+          element={
+            <EditAssistantPage user={user} onLogout={handleLogout} />
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />

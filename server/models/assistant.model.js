@@ -6,7 +6,7 @@ const pageSchema = new mongoose.Schema(
     path: { type: String, required: true },
     keywords: { type: [String], default: [] },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const assistantSchema = new mongoose.Schema(
@@ -30,6 +30,10 @@ const assistantSchema = new mongoose.Schema(
     assistantName: { type: String, required: true },
     businessName: { type: String, required: true },
     industry: { type: String, required: true },
+    businessDescription: {
+      type: String,
+      default: "",
+    },
 
     // Behaviour
     assistantTone: {
@@ -64,7 +68,7 @@ const assistantSchema = new mongoose.Schema(
     // Lifecycle
     isSetupComplete: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model("Assistant", assistantSchema);

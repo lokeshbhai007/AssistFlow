@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "../components/layout/Navbar.jsx";
 import { Toggle } from "../components/ui/Toggle.jsx";
 import { Card } from "../components/ui/Card.jsx";
 import { StepBar } from "../components/ui/StepBar.jsx";
+import { Skeleton } from "../components/ui/Skeleton.jsx";
 import { api } from "../lib/api.js";
 
 const fadeUp = {
@@ -53,10 +54,11 @@ const inputCls =
 const labelCls =
   "text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 block";
 
-export function BuildPage({ user, onLogout }) {
+export function EditAssistantPage({ user, onLogout }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [loadStatus, setLoadStatus] = useState("loading"); // "loading" | "ready" | "error"
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -77,6 +79,28 @@ export function BuildPage({ user, onLogout }) {
   const [pagePath, setPagePath] = useState("");
   const [pageKeyword, setPageKeyword] = useState("");
   const [pageKeywords, setPageKeywords] = useState([]);
+
+  // Load existing assistant data
+  useEffect(() => {
+    api("/api/user/assistant")
+      .then((data) => {
+        const a = data.assistant;
+        setForm({
+          assistantName: a.assistantName || "",
+          businessName: a.businessName || "",
+          industry: a.industry || "",
+          businessDescription: a.businessDescription || "",
+          assistantTone: a.assistantTone || "friendly",
+          theme: a.theme || "dark",
+          enableVoice: a.enableVoice ?? true,
+          enableNavigation: a.enableNavigation ?? true,
+          pages: a.pages || [],
+          geminiApiKey: a.geminiApiKey || "",
+        });
+        setLoadStatus("ready");
+      })
+      .catch(() => setLoadStatus("error"));
+  }, []);
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
@@ -107,7 +131,11 @@ export function BuildPage({ user, onLogout }) {
 
   const canContinue = () => {
     if (step === 1)
-      return form.assistantName.trim() && form.businessName.trim() && form.industry;
+      return (
+        form.assistantName.trim() &&
+        form.businessName.trim() &&
+        form.industry
+      );
     return true;
   };
 
@@ -116,12 +144,11 @@ export function BuildPage({ user, onLogout }) {
     setError("");
     try {
       await api("/api/user/assistant", {
-        method: "POST",
+        method: "PUT",
         body: JSON.stringify({
           ...form,
           name: user?.name || "",
           email: user?.email || "",
-          isSetupComplete : true
         }),
       });
       setSuccess(true);
@@ -132,6 +159,40 @@ export function BuildPage({ user, onLogout }) {
     }
   };
 
+  // ── Loading state ──
+  if (loadStatus === "loading") {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+        <Navbar
+          user={user}
+          onLogout={onLogout}
+          onBilling={() => navigate("/billing")}
+          currentPage="builder"
+        />
+        <Skeleton />
+      </div>
+    );
+  }
+
+  if (loadStatus === "error") {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-zinc-400 text-sm mb-4">
+            Failed to load assistant data.
+          </p>
+          <button
+            onClick={() => navigate("/build-assistant")}
+            className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Success state ──
   if (success) {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -144,26 +205,33 @@ export function BuildPage({ user, onLogout }) {
         <div className="max-w-lg mx-auto px-6 py-24 text-center">
           <div className="w-16 h-16 rounded-2xl bg-indigo-600 grid place-items-center mx-auto mb-6 shadow-lg shadow-indigo-500/30">
             <svg
-              width="28" height="28" viewBox="0 0 24 24"
-              fill="none" stroke="white" strokeWidth="2.5"
-              strokeLinecap="round" strokeLinejoin="round"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">
-            Assistant created!
+            Assistant updated!
           </h2>
           <p className="text-zinc-400 text-sm mb-8">
-            Your AI assistant{" "}
-            <span className="text-indigo-500 font-semibold">{form.assistantName}</span>{" "}
-            is ready. Head to the dashboard to upload documents and get your embed script.
+            Changes to{" "}
+            <span className="text-indigo-500 font-semibold">
+              {form.assistantName}
+            </span>{" "}
+            have been saved successfully.
           </p>
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/build-assistant")}
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow shadow-indigo-500/20 transition-all active:scale-95"
           >
-            Go to Dashboard
+            Back to Dashboard
           </button>
         </div>
       </div>
@@ -186,13 +254,34 @@ export function BuildPage({ user, onLogout }) {
         className="max-w-2xl mx-auto px-6 py-12"
       >
         {/* Header */}
-        <motion.div variants={fadeUp} className="mb-10">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight mb-1">
-            Build Your Assistant
-          </h1>
-          <p className="text-zinc-400 text-sm leading-relaxed">
-            Set up your AI-powered assistant in four steps. It'll be live on your website in minutes.
-          </p>
+        <motion.div variants={fadeUp} className="mb-10 flex items-center gap-3">
+          <button
+            onClick={() => navigate("/build-assistant")}
+            className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+            aria-label="Back"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight mb-1">
+              Edit Assistant
+            </h1>
+            <p className="text-zinc-400 text-sm leading-relaxed">
+              Update your assistant's configuration. Changes take effect
+              immediately.
+            </p>
+          </div>
         </motion.div>
 
         {/* Step bar */}
@@ -202,7 +291,6 @@ export function BuildPage({ user, onLogout }) {
 
         {/* Steps */}
         <AnimatePresence mode="wait">
-
           {/* ── STEP 1 ── */}
           {step === 1 && (
             <motion.div
@@ -245,7 +333,9 @@ export function BuildPage({ user, onLogout }) {
                     >
                       <option value="">Select industry…</option>
                       {INDUSTRIES.map((ind) => (
-                        <option key={ind} value={ind}>{ind}</option>
+                        <option key={ind} value={ind}>
+                          {ind}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -253,11 +343,13 @@ export function BuildPage({ user, onLogout }) {
                   <div>
                     <label className={labelCls}>Business Description</label>
                     <textarea
-                      placeholder="Describe what your business does, your products/services, and anything else the assistant should know…"
+                      placeholder="Describe what your business does…"
                       className={inputCls}
                       value={form.businessDescription}
                       maxLength={5000}
-                      onChange={(e) => set("businessDescription", e.target.value)}
+                      onChange={(e) =>
+                        set("businessDescription", e.target.value)
+                      }
                       style={{ resize: "vertical", minHeight: "110px" }}
                     />
                     <p className="text-[11px] text-zinc-400 mt-1 text-right">
@@ -289,12 +381,15 @@ export function BuildPage({ user, onLogout }) {
                           type="button"
                           onClick={() => set("assistantTone", t.value)}
                           className={`py-2.5 rounded-xl border text-xs font-medium transition-all duration-150
-                            ${form.assistantTone === t.value
-                              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400"
-                              : "border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-indigo-300 hover:text-indigo-500"
+                            ${
+                              form.assistantTone === t.value
+                                ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400"
+                                : "border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-indigo-300 hover:text-indigo-500"
                             }`}
                         >
-                          <span className="block text-base mb-0.5">{t.icon}</span>
+                          <span className="block text-base mb-0.5">
+                            {t.icon}
+                          </span>
                           {t.label}
                         </button>
                       ))}
@@ -310,12 +405,15 @@ export function BuildPage({ user, onLogout }) {
                           type="button"
                           onClick={() => set("theme", th.value)}
                           className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all duration-150
-                            ${form.theme === th.value
-                              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40"
-                              : "border-zinc-200 dark:border-zinc-700 hover:border-indigo-300"
+                            ${
+                              form.theme === th.value
+                                ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40"
+                                : "border-zinc-200 dark:border-zinc-700 hover:border-indigo-300"
                             }`}
                         >
-                          <div className={`w-full h-8 rounded-lg border ${th.preview}`} />
+                          <div
+                            className={`w-full h-8 rounded-lg border ${th.preview}`}
+                          />
                           <span
                             className={`text-[11px] font-semibold ${form.theme === th.value ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-500 dark:text-zinc-400"}`}
                           >
@@ -356,8 +454,8 @@ export function BuildPage({ user, onLogout }) {
             >
               <Card stepNum={3} title="Website Pages">
                 <p className="text-xs text-zinc-400 mb-4 -mt-3 leading-relaxed">
-                  Add the pages of your website so the assistant knows where to send users.
-                  Keywords help it match customer intent to the right page.
+                  Add or remove pages. The assistant uses these to navigate
+                  users to the right place.
                 </p>
 
                 {form.pages.length > 0 && (
@@ -371,7 +469,9 @@ export function BuildPage({ user, onLogout }) {
                           <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">
                             {pg.name}
                           </p>
-                          <p className="text-xs text-indigo-500 font-mono">{pg.path}</p>
+                          <p className="text-xs text-indigo-500 font-mono">
+                            {pg.path}
+                          </p>
                           {pg.keywords.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1.5">
                               {pg.keywords.map((kw) => (
@@ -391,9 +491,14 @@ export function BuildPage({ user, onLogout }) {
                           className="text-zinc-300 dark:text-zinc-600 hover:text-red-400 transition-colors mt-0.5 shrink-0"
                         >
                           <svg
-                            width="14" height="14" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" strokeWidth="2.2"
-                            strokeLinecap="round" strokeLinejoin="round"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                           >
                             <line x1="18" y1="6" x2="6" y2="18" />
                             <line x1="6" y1="6" x2="18" y2="18" />
@@ -441,7 +546,8 @@ export function BuildPage({ user, onLogout }) {
                         value={pageKeyword}
                         onChange={(e) => setPageKeyword(e.target.value)}
                         onKeyDown={(e) =>
-                          e.key === "Enter" && (e.preventDefault(), addKeyword())
+                          e.key === "Enter" &&
+                          (e.preventDefault(), addKeyword())
                         }
                       />
                       <button
@@ -491,35 +597,35 @@ export function BuildPage({ user, onLogout }) {
               animate="show"
               exit="exit"
             >
-              <Card stepNum={4} title="API Key & Deploy">
+              <Card stepNum={4} title="API Key & Review">
                 <div className="space-y-4">
                   <div>
                     <label className={labelCls}>Gemini API Key</label>
                     <input
                       type="password"
-                      placeholder="AIza…"
+                      placeholder="Leave blank to keep existing key"
                       className={inputCls}
                       value={form.geminiApiKey}
                       onChange={(e) => set("geminiApiKey", e.target.value)}
                     />
                     <p className="text-[11px] text-zinc-400 mt-1.5 leading-relaxed">
-                      Get your key at{" "}
-                      
-                       <a href="https://aistudio.google.com/apikey"
+                      Leave blank to keep your existing key. Get a new key at{" "}
+                      <a
+                        href="https://aistudio.google.com/apikey"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-indigo-500 hover:underline"
                       >
                         aistudio.google.com/apikey
                       </a>
-                      . Stored securely; never exposed to end-users.
+                      .
                     </p>
                   </div>
 
                   {/* Summary */}
                   <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 p-4 space-y-2">
                     <p className="text-[11px] uppercase tracking-widest text-zinc-400 font-semibold mb-3">
-                      Summary
+                      Review Changes
                     </p>
                     {[
                       ["Assistant", form.assistantName || "—"],
@@ -541,7 +647,10 @@ export function BuildPage({ user, onLogout }) {
                         `${form.pages.length} page${form.pages.length !== 1 ? "s" : ""}`,
                       ],
                     ].map(([key, val]) => (
-                      <div key={key} className="flex items-center justify-between text-xs">
+                      <div
+                        key={key}
+                        className="flex items-center justify-between text-xs"
+                      >
                         <span className="text-zinc-400">{key}</span>
                         <span className="text-zinc-700 dark:text-zinc-200 font-medium capitalize">
                           {val}
@@ -553,9 +662,15 @@ export function BuildPage({ user, onLogout }) {
                   {error && (
                     <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs">
                       <svg
-                        width="14" height="14" className="mt-0.5 shrink-0"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                        width="14"
+                        height="14"
+                        className="mt-0.5 shrink-0"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       >
                         <circle cx="12" cy="12" r="10" />
                         <line x1="12" y1="8" x2="12" y2="12" />
@@ -568,20 +683,27 @@ export function BuildPage({ user, onLogout }) {
               </Card>
             </motion.div>
           )}
-
         </AnimatePresence>
 
         {/* ── Nav buttons ── */}
-        <motion.div variants={fadeUp} className="flex items-center justify-between">
+        <motion.div
+          variants={fadeUp}
+          className="flex items-center justify-between"
+        >
           <button
             onClick={() => setStep((s) => Math.max(1, s - 1))}
             className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-95
               ${step === 1 ? "invisible" : ""}`}
           >
             <svg
-              width="14" height="14" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" strokeWidth="2.2"
-              strokeLinecap="round" strokeLinejoin="round"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
               <polyline points="15 18 9 12 15 6" />
             </svg>
@@ -596,9 +718,14 @@ export function BuildPage({ user, onLogout }) {
             >
               Continue
               <svg
-                width="14" height="14" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" strokeWidth="2.2"
-                strokeLinecap="round" strokeLinejoin="round"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
                 <polyline points="9 18 15 12 9 6" />
               </svg>
@@ -613,9 +740,14 @@ export function BuildPage({ user, onLogout }) {
                 <>
                   <svg
                     className="animate-spin"
-                    width="14" height="14" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" strokeWidth="2.5"
-                    strokeLinecap="round" strokeLinejoin="round"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
                     <path d="M21 12a9 9 0 11-6.219-8.56" />
                   </svg>
@@ -623,13 +755,18 @@ export function BuildPage({ user, onLogout }) {
                 </>
               ) : (
                 <>
-                  Launch Assistant
+                  Save Changes
                   <svg
-                    width="14" height="14" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" strokeWidth="2.2"
-                    strokeLinecap="round" strokeLinejoin="round"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    <polyline points="9 18 15 12 9 6" />
+                    <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </>
               )}

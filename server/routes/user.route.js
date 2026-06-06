@@ -2,8 +2,8 @@ import express from "express";
 import { authenticate } from "../middleware/auth.middleware.js";
 import {
   createAssistant,
+  deleteAssistant,
   getAssistant,
-  markSetupComplete,
 } from "../controllers/assistant.controller.js";
 
 const router = express.Router();
@@ -12,8 +12,9 @@ const router = express.Router();
 router.use(authenticate);
 
 // ── Assistant ────────────────────────────────────────────────────────────────
-router.post("/assistant", createAssistant); // create / upsert
-router.get("/assistant", getAssistant); // fetch current user's assistant
-router.patch("/assistant/complete", markSetupComplete); // mark isSetupComplete = true
+router.post("/assistant", createAssistant);
+router.put("/assistant", createAssistant);        // ← reuses same upsert logic
+router.get("/assistant", getAssistant);
+router.delete("/assistant", deleteAssistant);     // ← new
 
 export default router;

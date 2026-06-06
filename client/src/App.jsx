@@ -10,6 +10,8 @@ import { AdminDashboard } from "./components/dashboard/AdminDashboard.jsx";
 import { HomePage } from "./pages/HomePage.jsx";
 import { BillingPage } from "./pages/BillingPage.jsx";
 import { BuildPage } from "./pages/BuildPage.jsx";
+import { AssistantGate } from "./components/dashboard/AssistantGate.jsx";
+
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -22,9 +24,8 @@ export default function App() {
       try {
         const data = await api("/api/auth/me");
         if (data?.user) setUser(data.user);
-
       } catch (error) {
-        setUser(null); 
+        setUser(null);
       } finally {
         setChecking(false);
       }
@@ -89,7 +90,13 @@ export default function App() {
         />
         <Route
           path="/build-assistant"
-          element={<BuildPage user={user} onLogout={handleLogout} />}
+          element={
+            <AssistantGate
+              user={user}
+              onLogout={handleLogout}
+              BuildPage={BuildPage}
+            />
+          }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

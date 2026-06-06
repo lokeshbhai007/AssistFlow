@@ -1,9 +1,13 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export function Navbar({ user, onLogout, onBilling, currentPage }) {
   const isUser = user?.role !== "ADMIN";
 
+  const navigate = useNavigate();
+
   return (
+
     <motion.header
       initial={{ opacity: 0, y: -12 }}
       animate={{ opacity: 1, y: 0 }}
@@ -13,7 +17,7 @@ export function Navbar({ user, onLogout, onBilling, currentPage }) {
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
 
         {/* Brand */}
-        <div className="flex items-center gap-2.5">
+        <button onClick={() => navigate("/")} className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 grid place-items-center shadow shadow-indigo-500/30">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <path d="M6.5 1L12 3.5v6L6.5 12 1 9.5v-6L6.5 1Z" fill="white" opacity="0.85"/>
@@ -24,7 +28,7 @@ export function Navbar({ user, onLogout, onBilling, currentPage }) {
           {user?.role === "ADMIN" && (
             <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium ml-1">· Admin Console</span>
           )}
-        </div>
+        </button>
 
         {/* Right side */}
         <div className="flex items-center gap-2.5">

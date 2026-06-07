@@ -33,6 +33,8 @@ const THEME_COLOR = {
   neon: "bg-black     text-fuchsia-400",
 };
 
+const DOMAIN_URL = import.meta.env.VITE_ASSISTANT_DOMAIN_URL;
+
 // ─── Assistant Dashboard ──────────────────────────────────────────────────────
 export function AssistantDashboard({ assistant, user, onLogout, onDeleted }) {
   const navigate = useNavigate();
@@ -316,7 +318,7 @@ export function AssistantDashboard({ assistant, user, onLogout, onDeleted }) {
           <button
             onClick={() => {
               navigator.clipboard.writeText(
-                `<script src="https://yourdomain.com/widget.js" data-id="${a._id}"></script>`,
+                `<script src="${DOMAIN_URL}/widget.js" data-id="${a._id}"></script>`,
               );
               setToastVisible(true);
             }}

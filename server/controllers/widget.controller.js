@@ -7,10 +7,10 @@ import Assistant from "../models/assistant.model.js";
  */
 export async function getWidgetConfig(req, res) {
   try {
-    const { assistantId } = req.params; 
+    const { assistantId } = req.params;
 
     const assistant = await Assistant.findById(assistantId).select(
-      "assistantName businessName theme assistantTone enableVoice isSetupComplete"
+      "assistantName businessName theme assistantTone enableVoice isSetupComplete",
     );
 
     if (!assistant) {
@@ -18,7 +18,9 @@ export async function getWidgetConfig(req, res) {
     }
 
     if (!assistant.isSetupComplete) {
-      return res.status(403).json({ error: "Assistant setup is not complete." });
+      return res
+        .status(403)
+        .json({ error: "Assistant setup is not complete." });
     }
 
     return res.json({
@@ -64,16 +66,24 @@ export async function handleWidgetChat(req, res) {
       return res.status(404).json({ error: "Assistant not found." });
     }
     if (!assistant.isSetupComplete) {
-      return res.status(403).json({ error: "This assistant is not active yet." });
+      return res
+        .status(403)
+        .json({ error: "This assistant is not active yet." });
     }
     if (!assistant.geminiApiKey) {
-      return res.status(500).json({ error: "AI key not configured for this assistant." });
+      return res
+        .status(500)
+        .json({ error: "AI key not configured for this assistant." });
     }
 
     // ── Check request limit ───────────────────────────────────────────────────
     if (assistant.totalMessages >= assistant.requestLimit) {
+      await Assistant.findByIdAndUpdate(assistantId, {
+        geminiStatus: "limit_exceeded",
+      });
       return res.status(429).json({
-        error: "This assistant has reached its message limit. Please contact support.",
+        error:
+          "This assistant has reached its message limit. Please contact support.",
       });
     }
 
@@ -82,17 +92,20 @@ export async function handleWidgetChat(req, res) {
       ? assistant.pages
           .map(
             (pg) =>
-              `Page: ${pg.name} (${pg.path})\nKeywords: ${pg.keywords.join(", ")}`
+              `Page: ${pg.name} (${pg.path})\nKeywords: ${pg.keywords.join(", ")}`,
           )
           .join("\n\n")
       : "No specific pages indexed.";
 
-    const toneGuide = {
-      friendly: "Respond in a warm, casual, and approachable tone. Use natural language.",
-      professional: "Respond formally and concisely. Be precise and professional at all times.",
-      sales:
-        "Be enthusiastic and persuasive. Highlight benefits and gently guide users toward conversion.",
-    }[assistant.assistantTone] || "Be helpful and clear.";
+    const toneGuide =
+      {
+        friendly:
+          "Respond in a warm, casual, and approachable tone. Use natural language.",
+        professional:
+          "Respond formally and concisely. Be precise and professional at all times.",
+        sales:
+          "Be enthusiastic and persuasive. Highlight benefits and gently guide users toward conversion.",
+      }[assistant.assistantTone] || "Be helpful and clear.";
 
     const systemPrompt = `You are ${assistant.assistantName}, the AI assistant for ${assistant.businessName}.
 
@@ -113,7 +126,7 @@ Rules:
 - Do not make up facts not present in the knowledge base.`;
 
     // ── Call Gemini API ───────────────────────
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${assistant.geminiApiKey}`;
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${assistant.geminiApiKey}`;
 
     // Build contents array: prior history + new user message
     const contents = [
@@ -137,16 +150,35 @@ Rules:
     if (!geminiRes.ok) {
       const errData = await geminiRes.json().catch(() => ({}));
       console.error("[widget/chat] Gemini error:", errData);
-      return res.status(502).json({ error: "AI service error. Please try again." });
+
+      // ── Write status back to DB based on error code ───────────────────────
+      const code = errData?.error?.code;
+      if (code === 429) {
+        await Assistant.findByIdAndUpdate(assistantId, {
+          geminiStatus: "limit_exceeded",
+        });
+      } else if (code === 400 || code === 403) {
+        await Assistant.findByIdAndUpdate(assistantId, {
+          geminiStatus: "invalid",
+        });
+      }
+
+      return res
+        .status(502)
+        .json({ error: "AI service error. Please try again." });
     }
 
+    // success path
     const geminiData = await geminiRes.json();
     const reply =
       geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ||
       "I'm sorry, I couldn't generate a response. Please try again.";
 
-    // ── Increment message counter ─────────────────────────────────────────────
-    await Assistant.findByIdAndUpdate(assistantId, { $inc: { totalMessages: 1 } });
+    // ── Increment counter + mark active ──────────────────────────────────────
+    await Assistant.findByIdAndUpdate(assistantId, {
+      $inc: { totalMessages: 1 },
+      geminiStatus: "active",
+    });
 
     return res.json({ reply });
   } catch (err) {
@@ -155,15 +187,13 @@ Rules:
   }
 }
 
-
-
 // ─── GET /api/widget/validate-key/:assistantId ────────────────────────────────
 export async function validateGeminiKey(req, res) {
   try {
     const { assistantId } = req.params;
 
     const assistant = await Assistant.findById(assistantId).select(
-      "geminiApiKey totalMessages requestLimit"
+      "geminiApiKey totalMessages requestLimit",
     );
     if (!assistant) return res.status(404).json({ error: "Not found." });
 
@@ -186,13 +216,12 @@ export async function validateGeminiKey(req, res) {
           contents: [{ role: "user", parts: [{ text: "hi" }] }],
           generationConfig: { maxOutputTokens: 1 },
         }),
-      }
+      },
     );
 
     if (probe.status === 200) return res.json({ status: "active" });
     if (probe.status === 429) return res.json({ status: "limit_exceeded" });
     return res.json({ status: "invalid" });
-
   } catch (err) {
     console.error("[validate-key]", err);
     return res.json({ status: "invalid" });

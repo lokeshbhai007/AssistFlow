@@ -58,6 +58,11 @@ const assistantSchema = new mongoose.Schema(
 
     // API key (stored encrypted in production — store as-is here for dev)
     geminiApiKey: { type: String, default: "" },
+    geminiStatus: {
+      type: String,
+      enum: ["active", "invalid", "limit_exceeded", "unchecked"],
+      default: "unchecked",
+    },
 
     // Usage & billing
     totalMessages: { type: Number, default: 0 },

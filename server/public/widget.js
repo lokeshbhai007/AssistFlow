@@ -158,7 +158,7 @@
       /* avatar orb */
       .af-orb-wrap {
         display: flex; flex-direction: column; align-items: center;
-        gap: 20px; flex: 1; justify-content: center;
+        gap: 20px;  justify-content: center;
       }
       .af-orb {
         width: 100px; height: 100px;
@@ -750,8 +750,6 @@
             <div class="af-voice-tagline">Welcome to ${escHtml(cfg.businessName || cfg.assistantName)}.<br>Always ready to answer your queries...</div>
           </div>
         </div>
-
-        
 
         <div id="af-voice-status" class="af-voice-status">Tap button to Speak</div>
 

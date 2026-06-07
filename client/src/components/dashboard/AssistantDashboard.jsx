@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "../layout/Navbar.jsx";
@@ -35,11 +35,10 @@ const THEME_COLOR = {
 
 // ── Gemini status config ─────────────────────────────────────────────────────
 const GEMINI_STATUS = {
-  checking:     { dot: "bg-zinc-400",    text: "text-zinc-400",    label: "Checking…"     },
-  active:       { dot: "bg-emerald-500", text: "text-emerald-500", label: "Active"         },
-  invalid:      { dot: "bg-red-500",     text: "text-red-500",     label: "Invalid Key"    },
-  limit_exceeded:{ dot: "bg-amber-400",  text: "text-amber-400",   label: "Limit Exceeded" },
-  error:        { dot: "bg-zinc-400",    text: "text-zinc-400",    label: "Unknown"        },
+  unchecked:     { dot: "bg-zinc-400",    text: "text-zinc-400",    label: "Not tested yet"  },
+  active:        { dot: "bg-emerald-500", text: "text-emerald-500", label: "Active"           },
+  invalid:       { dot: "bg-red-500",     text: "text-red-500",     label: "Invalid Key"      },
+  limit_exceeded:{ dot: "bg-amber-400",   text: "text-amber-400",   label: "Limit Exceeded"   },
 };
 
 const DOMAIN_URL = import.meta.env.VITE_ASSISTANT_DOMAIN_URL;
@@ -53,30 +52,6 @@ export function AssistantDashboard({ assistant, user, onLogout, onDeleted }) {
   const [deleting, setDeleting]               = useState(false);
   const [deleteError, setDeleteError]         = useState("");
   const [toastVisible, setToastVisible]       = useState(false);
-  const [geminiStatus, setGeminiStatus]       = useState("checking");
-
-  // ── Probe Gemini key on mount ──────────────────────────────────────────────
-  useEffect(() => {
-    if (!a?._id) return;
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/widget/validate-key/${a._id}`
-        );
-        if (cancelled) return;
-        const data = await res.json();
-        setGeminiStatus(data.status || "error");
-      } catch {
-        if (!cancelled) setGeminiStatus("error");
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [a?._id]);
-
   const handleDelete = async () => {
     setDeleting(true);
     setDeleteError("");
@@ -91,7 +66,7 @@ export function AssistantDashboard({ assistant, user, onLogout, onDeleted }) {
     }
   };
 
-  const gs = GEMINI_STATUS[geminiStatus] ?? GEMINI_STATUS.error;
+  const gs = GEMINI_STATUS[a.geminiStatus] ?? GEMINI_STATUS.unchecked;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -142,7 +117,7 @@ export function AssistantDashboard({ assistant, user, onLogout, onDeleted }) {
             <Badge
               className={`${a.plan === "pro"
                 ? "bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400"
-                : "bg-green-400 dark:bg-green-600 text-black"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
               }`}
             >
               {a.plan} plan
@@ -159,11 +134,11 @@ export function AssistantDashboard({ assistant, user, onLogout, onDeleted }) {
 
           {/* ── Gemini AI Status stat ── */}
           <div className="bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3">
-            <p className="text-[11px] text-zinc-400 font-medium mb-0.5">AI Status</p>
+            <p className="text-[11px] text-zinc-400 font-medium mb-0.5">Gemini AI Status</p>
             <span className={`inline-flex items-center gap-1.5 text-sm font-bold ${gs.text}`}>
               <span
                 className={`w-2 h-2 rounded-full flex-shrink-0 ${gs.dot} ${
-                  geminiStatus === "checking" ? "animate-pulse" : ""
+                  a.geminiStatus === "unchecked" ? "animate-pulse" : ""
                 }`}
               />
               {gs.label}

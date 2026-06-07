@@ -1,8 +1,5 @@
 import { Router } from "express";
-import {
-  getWidgetConfig,
-  handleWidgetChat,
-} from "../controllers/widget.controller.js";
+import { getWidgetConfig, handleWidgetChat, validateGeminiKey } from "../controllers/widget.controller.js";
 
 const router = Router();
 
@@ -13,6 +10,9 @@ router.get("/config/:assistantId", getWidgetConfig);
 // POST /api/widget/chat
 // Body: { assistantId, message, conversationHistory }
 router.post("/chat", handleWidgetChat);
+
+// for check validation of key
+router.get("/validate-key/:assistantId", validateGeminiKey);
 
 export default router;
 

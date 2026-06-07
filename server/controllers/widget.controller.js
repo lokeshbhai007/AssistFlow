@@ -154,3 +154,47 @@ Rules:
     return res.status(500).json({ error: "Internal server error." });
   }
 }
+
+
+
+// ─── GET /api/widget/validate-key/:assistantId ────────────────────────────────
+export async function validateGeminiKey(req, res) {
+  try {
+    const { assistantId } = req.params;
+
+    const assistant = await Assistant.findById(assistantId).select(
+      "geminiApiKey totalMessages requestLimit"
+    );
+    if (!assistant) return res.status(404).json({ error: "Not found." });
+
+    // Limit exceeded — no need to call Gemini
+    if (assistant.totalMessages >= assistant.requestLimit) {
+      return res.json({ status: "limit_exceeded" });
+    }
+
+    if (!assistant.geminiApiKey) {
+      return res.json({ status: "invalid" });
+    }
+
+    // Minimal probe call to Gemini
+    const probe = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${assistant.geminiApiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: "hi" }] }],
+          generationConfig: { maxOutputTokens: 1 },
+        }),
+      }
+    );
+
+    if (probe.status === 200) return res.json({ status: "active" });
+    if (probe.status === 429) return res.json({ status: "limit_exceeded" });
+    return res.json({ status: "invalid" });
+
+  } catch (err) {
+    console.error("[validate-key]", err);
+    return res.json({ status: "invalid" });
+  }
+}

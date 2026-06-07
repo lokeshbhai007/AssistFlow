@@ -7,7 +7,7 @@ import Assistant from "../models/assistant.model.js";
  */
 export async function getWidgetConfig(req, res) {
   try {
-    const { assistantId } = req.params;
+    const { assistantId } = req.params; 
 
     const assistant = await Assistant.findById(assistantId).select(
       "assistantName businessName theme assistantTone enableVoice isSetupComplete"
@@ -112,8 +112,8 @@ Rules:
 - Keep answers concise (2-4 sentences unless more detail is genuinely needed).
 - Do not make up facts not present in the knowledge base.`;
 
-    // ── Call Gemini API ───────────────────────────────────────────────────────
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${assistant.geminiApiKey}`;
+    // ── Call Gemini API ───────────────────────
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${assistant.geminiApiKey}`;
 
     // Build contents array: prior history + new user message
     const contents = [

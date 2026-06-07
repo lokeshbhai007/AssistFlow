@@ -2,7 +2,7 @@
  * AssistFlow Widget
  * Drop-in chatbot for any website.
  * Usage: <script src="https://your-domain.com/widget.js" data-id="ASSISTANT_ID"></script>
- */
+ */ 
 (function () {
   "use strict";
 
